@@ -2,7 +2,7 @@ package httpclient_test
 
 import (
 	"fmt"
-	"github.com/qianlidongfeng/string"
+	"github.com/qianlidongfeng/gstring"
 	"testing"
 	"github.com/qianlidongfeng/httpclient"
 	"time"
@@ -23,7 +23,48 @@ func TestHttpClient_Get(t *testing.T) {
 	if err != nil{
 		t.Error(err)
 	}
-	_=c
+	html,err:=c.Get("https://www.baidu.com")
+	if err !=nil{
+		t.Error(err)
+	}
+	fmt.Println(html)
+}
+
+func TestHttpClient_Post(t *testing.T) {
+	c,err:=httpclient.NewHttpClient()
+	if err != nil{
+		t.Error(err)
+	}
+	html,err:=c.Post("http://httpbin.org/post","username=test&password=ab123123")
+	if err !=nil{
+		t.Error(err)
+	}
+	fmt.Println(html)
+}
+
+func TestHttpClient_PostJson(t *testing.T) {
+	c,err:=httpclient.NewHttpClient()
+	if err != nil{
+		t.Error(err)
+	}
+	html,err:=c.PostJson("http://httpbin.org/post",`[{"name":"liu","age":23}]`)
+	if err !=nil{
+		t.Error(err)
+	}
+	fmt.Println(html)
+}
+
+func TestHttpClient_PostBinary(t *testing.T) {
+	c,err:=httpclient.NewHttpClient()
+	if err != nil{
+		t.Error(err)
+	}
+	bin:=[]byte{1,2,3,4,5}
+	html,err:=c.PostBinary("http://httpbin.org/post",bin)
+	if err !=nil{
+		t.Error(err)
+	}
+	fmt.Println(html)
 }
 
 func TestMakeCookies(t *testing.T) {
@@ -53,12 +94,39 @@ func TestHttpClient_SetCookies(t *testing.T) {
 func TestHttpClient_SetSocksProxy(t *testing.T) {
 	c,err:=httpclient.NewHttpClient()
 	if err != nil{
-		fmt.Print(err)
+		t.Error(err)
 	}
-	c.SetSocksProxy("127.0.0.1:1080")
+	err=c.SetSocksProxy("192.168.0.103:1080")
+	if err != nil{
+		t.Error(err)
+	}
 	html,err:=c.Get("https://ip.cn/")
 	if err != nil{
-		fmt.Println(err)
+		t.Error(err)
 	}
 	fmt.Println(html)
+}
+
+func TestHttpClient_SetHttpProxy(t *testing.T) {
+	c,err:=httpclient.NewHttpClient()
+	if err != nil{
+		t.Error(err)
+	}
+	err=c.SetHttpProxy("http://192.168.0.103:1081")
+	if err != nil{
+		t.Error(err)
+	}
+	html,err:=c.Get("https://ip.cn/")
+	if err != nil{
+		t.Error(err)
+	}
+	fmt.Println(html)
+}
+
+func TestHttpClient_SetTimeOut(t *testing.T) {
+
+}
+
+func TestHttpClient_UnsetTimeOut(t *testing.T) {
+
 }
