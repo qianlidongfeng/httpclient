@@ -23,16 +23,11 @@ func NewHttpClient () (c HttpClient,err error){
 		_=jar
 		return
 	}
-	h:=make(map[string]string)
-	h["Accept-Encoding"]="zh-CN,zh;q=0.9"
-	h["Cache-Control"] = "no-cache"
-	h["Connection"] = "keep-alive"
-	h["Accept"] = "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3"
-	h["Accept-Encoding"] = "gzip, deflate, br"
-	h["User-Agent"] = UserAgents.One()
+	header:=Headers.One()
+	header["User-Agent"] = UserAgents.One()
 	c = HttpClient{
-		client:http.Client{Jar:jar},
-		header:h,
+		client:http.Client{Jar:nil},
+		header:header,
 		cookiejar:jar,
 	}
 	return
