@@ -12,9 +12,9 @@ import (
 
 func GetHtml(resp *http.Response) (html string,err error){
 	var b []byte
-	var reader io.Reader
 	switch strings.ToLower(resp.Header.Get("Content-Encoding")) {
 	case "gzip":
+		var reader io.Reader
 		reader,err=gzip.NewReader(resp.Body)
 		if err != nil{
 			return
@@ -31,7 +31,7 @@ func GetHtml(resp *http.Response) (html string,err error){
 		}
 		b, err = dec.DecompressBuffer(br, nil)
 	default:
-		b,err=ioutil.ReadAll(reader)
+		b,err=ioutil.ReadAll(resp.Body)
 		if err != nil{
 			return
 		}
