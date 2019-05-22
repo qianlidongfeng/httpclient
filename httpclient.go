@@ -25,6 +25,7 @@ type HttpClient struct{
 	header map[string]string
 	tempheader map[string]string
 	cookiejar http.CookieJar
+	reqclose bool
 }
 
 func NewHttpClient () HttpClient{
@@ -39,6 +40,7 @@ func NewHttpClient () HttpClient{
 		header:header,
 		tempheader:make(map[string]string),
 		cookiejar:jar,
+		reqclose:true,
 	}
 }
 
@@ -168,6 +170,12 @@ func (this *HttpClient) Get(url string) (r Resp,err error){
 	for k,v :=range this.tempheader{
 		req.Header.Set(k,v)
 	}
+	if this.reqclose{
+		req.Header.Set("Connection","close")
+		req.Close=true
+	}else{
+		req.Header.Set("Connection","keep-alive")
+	}
 	this.tempheader=make(map[string]string)
 	resp,err:=this.client.Do(req)
 	if err != nil{
@@ -200,6 +208,12 @@ func (this *HttpClient) Post(url string,data string)(r Resp,err error){
 	for k,v :=range this.tempheader{
 		req.Header.Set(k,v)
 	}
+	if this.reqclose{
+		req.Header.Set("Connection","close")
+		req.Close=true
+	}else{
+		req.Header.Set("Connection","keep-alive")
+	}
 	this.tempheader=make(map[string]string)
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	resp, err := this.client.Do(req)
@@ -226,6 +240,12 @@ func (this *HttpClient) PostJson(url string,data string) (r Resp,err error){
 	}
 	for k,v :=range this.tempheader{
 		req.Header.Set(k,v)
+	}
+	if this.reqclose{
+		req.Header.Set("Connection","close")
+		req.Close=true
+	}else{
+		req.Header.Set("Connection","keep-alive")
 	}
 	this.tempheader=make(map[string]string)
 	req.Header.Set("Content-Type", "application/json")
@@ -254,6 +274,12 @@ func (this *HttpClient) PostBinary(url string,bin []byte)(r Resp,err error){
 	for k,v :=range this.tempheader{
 		req.Header.Set(k,v)
 	}
+	if this.reqclose{
+		req.Header.Set("Connection","close")
+		req.Close=true
+	}else{
+		req.Header.Set("Connection","keep-alive")
+	}
 	this.tempheader=make(map[string]string)
 	resp, err := this.client.Do(req)
 	if err != nil {
@@ -267,4 +293,8 @@ func (this *HttpClient) PostBinary(url string,bin []byte)(r Resp,err error){
 	}
 	r.Html=html
 	return
+}
+
+func (this *HttpClient) SetReqClose(b bool){
+	this.reqclose=b
 }
