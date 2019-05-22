@@ -3,7 +3,8 @@ package httpclient
 import (
 	"bytes"
 	"crypto/tls"
-	"github.com/headzoo/surf/errors"
+	"errors"
+	"fmt"
 	"golang.org/x/net/proxy"
 	"net"
 	"net/http"
@@ -13,30 +14,32 @@ import (
 	"time"
 )
 
+type Resp struct{
+	Html string
+	StatusCode int
+}
+
 
 type HttpClient struct{
 	client http.Client
 	header map[string]string
+	tempheader map[string]string
 	cookiejar http.CookieJar
 }
 
-func NewHttpClient () (c HttpClient,err error){
-	jar,err:=cookiejar.New(nil)
-	if err != nil{
-		_=jar
-		return
-	}
+func NewHttpClient () HttpClient{
+	jar,_:=cookiejar.New(nil)
 	header:=Headers.One()
 	header["User-Agent"] = UserAgents.One()
-	c = HttpClient{
+	return HttpClient{
 		client:http.Client{
 			Jar:nil,
 			//Transport:&http.Transport{DisableKeepAlives: true,},
 	},
 		header:header,
+		tempheader:make(map[string]string),
 		cookiejar:jar,
 	}
-	return
 }
 
 func (this *HttpClient) SetHeader(header map[string]string){
@@ -44,6 +47,10 @@ func (this *HttpClient) SetHeader(header map[string]string){
 	for k,v := range header{
 		this.header[k]=v
 	}
+}
+
+func (this *HttpClient) SetTempHeaderField(key string,value string){
+	this.tempheader[key]=value
 }
 
 func (this *HttpClient) UnsetHeader(){
@@ -83,7 +90,7 @@ func (this *HttpClient) UnsetHttpProxy(){
 	return
 }
 
-func (this *HttpClient) SetSocksProxy(prox string) error{
+func (this *HttpClient) SetSock5Proxy(prox string) error{
 	dialSocksProxy, err := proxy.SOCKS5("tcp", prox, nil, proxy.Direct)
 	//dialSocksProxy, err := proxy.SOCKS5("tcp", prox, nil, &net.Dialer { Timeout: 30 * time.Second, KeepAlive: 30 * time.Second})
 	if err != nil{
@@ -120,7 +127,7 @@ func (this *HttpClient) SetTimeOut(d time.Duration){
 	this.client.Transport=&http.Transport{
 		DialContext: (&net.Dialer{
 			Timeout:   d,
-			KeepAlive: d,
+			//KeepAlive: d,
 		}).DialContext,
 		TLSHandshakeTimeout: d,
 		ExpectContinueTimeout:d,
@@ -141,7 +148,15 @@ func (this *HttpClient) SetCookies(targetUrl string, cookies []*http.Cookie) err
 	return nil
 }
 
-func (this *HttpClient) Get(url string) (html string,err error){
+func (this *HttpClient) GetCooikes(targetUrl string) ([]*http.Cookie,error){
+	u, err := url.Parse(targetUrl)
+	if err != nil{
+		return nil,err
+	}
+	return this.cookiejar.Cookies(u),nil
+}
+
+func (this *HttpClient) Get(url string) (r Resp,err error){
 	req,err:=http.NewRequest("GET", url, nil)
 	if err != nil{
 		return
@@ -150,25 +165,31 @@ func (this *HttpClient) Get(url string) (html string,err error){
 	for k,v :=range this.header{
 		req.Header.Set(k,v)
 	}
+	for k,v :=range this.tempheader{
+		req.Header.Set(k,v)
+	}
+	this.tempheader=make(map[string]string)
 	resp,err:=this.client.Do(req)
 	if err != nil{
 		return
 	}
+	r.StatusCode=resp.StatusCode
 	if resp.StatusCode != 200{
-		err = errors.New("status code:%d",resp.StatusCode)
+		err = errors.New(fmt.Sprintf("status code:%d",resp.StatusCode))
 		resp.Body.Close()
 		return
 	}
-	html,err =GetHtml(resp)
+	html,err :=GetHtml(resp)
 	if err != nil{
 		resp.Body.Close()
 		return
 	}
+	r.Html=html
 	resp.Body.Close()
 	return
 }
 
-func (this *HttpClient) Post(url string,data string)(html string,err error){
+func (this *HttpClient) Post(url string,data string)(r Resp,err error){
 	req,err:=http.NewRequest("POST", url, strings.NewReader(data))
 	if err != nil{
 		return
@@ -176,20 +197,26 @@ func (this *HttpClient) Post(url string,data string)(html string,err error){
 	for k,v :=range this.header{
 		req.Header.Set(k,v)
 	}
+	for k,v :=range this.tempheader{
+		req.Header.Set(k,v)
+	}
+	this.tempheader=make(map[string]string)
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	resp, err := this.client.Do(req)
 	if err != nil {
 		return
 	}
 	defer resp.Body.Close()
-	html,err =GetHtml(resp)
+	r.StatusCode=resp.StatusCode
+	html,err :=GetHtml(resp)
 	if err != nil {
 		return
 	}
+	r.Html=html
 	return
 }
 
-func (this *HttpClient) PostJson(url string,data string) (html string,err error){
+func (this *HttpClient) PostJson(url string,data string) (r Resp,err error){
 	req,err:=http.NewRequest("POST", url, bytes.NewBuffer([]byte(data)))
 	if err != nil{
 		return
@@ -197,20 +224,26 @@ func (this *HttpClient) PostJson(url string,data string) (html string,err error)
 	for k,v :=range this.header{
 		req.Header.Set(k,v)
 	}
+	for k,v :=range this.tempheader{
+		req.Header.Set(k,v)
+	}
+	this.tempheader=make(map[string]string)
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := this.client.Do(req)
 	if err != nil {
 		return
 	}
 	defer resp.Body.Close()
-	html,err =GetHtml(resp)
+	r.StatusCode=resp.StatusCode
+	html,err :=GetHtml(resp)
 	if err != nil {
 		return
 	}
+	r.Html=html
 	return
 }
 
-func (this *HttpClient) PostBinary(url string,bin []byte)(html string,err error){
+func (this *HttpClient) PostBinary(url string,bin []byte)(r Resp,err error){
 	req, err := http.NewRequest("POST", url, bytes.NewReader(bin))
 	if err != nil{
 		return
@@ -218,14 +251,20 @@ func (this *HttpClient) PostBinary(url string,bin []byte)(html string,err error)
 	for k,v :=range this.header{
 		req.Header.Set(k,v)
 	}
+	for k,v :=range this.tempheader{
+		req.Header.Set(k,v)
+	}
+	this.tempheader=make(map[string]string)
 	resp, err := this.client.Do(req)
 	if err != nil {
 		return
 	}
 	defer resp.Body.Close()
-	html,err =GetHtml(resp)
+	r.StatusCode=resp.StatusCode
+	html,err :=GetHtml(resp)
 	if err != nil {
 		return
 	}
+	r.Html=html
 	return
 }

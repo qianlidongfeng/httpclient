@@ -2,7 +2,7 @@ package httpclient_test
 
 import (
 	"fmt"
-	"github.com/qianlidongfeng/gstring"
+	"github.com/qianlidongfeng/toolbox"
 	"testing"
 	"github.com/qianlidongfeng/httpclient"
 	"time"
@@ -88,7 +88,7 @@ func TestHttpClient_SetCookies(t *testing.T) {
 	}
 	c.SetCookies("https://www.baidu.com/",cookies)
 	html,err:=c.Get("https://www.qq.com/")
-	fmt.Println(gstring.GbkToUtf8([]byte(html)))
+	fmt.Println(toolbox.GbkToUtf8(html))
 }
 
 func TestHttpClient_SetSocksProxy(t *testing.T) {

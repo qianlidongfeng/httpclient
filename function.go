@@ -67,3 +67,23 @@ func MakeCookies(domain string,path string,cookie string)(cookies []*http.Cookie
 	}
 	return
 }
+
+func GetCookieString(cookies []*http.Cookie) string{
+	var s string
+	for _,cookie := range cookies{
+		s+=cookie.Name+"="+cookie.Value+"; "
+	}
+	return strings.TrimRight(s,"; ")
+}
+
+func GetBaseDomain(url string) string{
+	start:= strings.Index(url,".")
+	if start != -1{
+		url=url[start+1:]
+	}
+	end := strings.Index(url,"/")
+	if end != -1{
+		url=url[:end]
+	}
+	return "."+url
+}
