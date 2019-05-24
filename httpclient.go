@@ -35,7 +35,7 @@ func NewHttpClient () HttpClient{
 	return HttpClient{
 		client:http.Client{
 			Jar:nil,
-			//Transport:&http.Transport{DisableKeepAlives: true,},
+			Transport:&http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true},},
 	},
 		header:header,
 		tempheader:make(map[string]string),
@@ -76,6 +76,7 @@ func (this *HttpClient) SetHttpProxy(proxy string) error{
 		Proxy: http.ProxyURL(proxyUrl),
 		//DisableKeepAlives: true,
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		TLSNextProto:    make(map[string]func(authority string, c *tls.Conn) http.RoundTripper),
 		DialContext: (&net.Dialer{
 			Timeout:   this.client.Timeout,
 			KeepAlive: this.client.Timeout,
@@ -127,6 +128,7 @@ func (this *HttpClient) ClearCookie() error{
 func (this *HttpClient) SetTimeOut(d time.Duration){
 	this.client.Timeout=d
 	this.client.Transport=&http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 		DialContext: (&net.Dialer{
 			Timeout:   d,
 			//KeepAlive: d,
