@@ -1,8 +1,10 @@
 package httpclient
 
 import (
+	"bytes"
 	"compress/gzip"
 	"errors"
+	"fmt"
 	"gopkg.in/kothar/brotli-go.v0/dec"
 	"io"
 	"io/ioutil"
@@ -37,6 +39,30 @@ func GetHtml(resp *http.Response) (html string,err error){
 		}
 	}
 	html=string(b)
+	return
+}
+
+func DecodeContent(buf []byte,encode string)(content []byte,err error){
+	switch encode{
+	case "gzip":
+		var reader io.Reader
+		reader, err = gzip.NewReader(bytes.NewReader(buf))
+		if err != nil{
+			return
+		}
+		content,err=ioutil.ReadAll(reader)
+		if err != nil{
+			return
+		}
+	case "br":
+		content, err = dec.DecompressBuffer(buf, nil)
+		if err !=nil{
+			return
+		}
+	default:
+		err = errors.New(fmt.Sprintf("unknown Content-Encoding:%s",encode))
+		return
+	}
 	return
 }
 

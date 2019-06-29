@@ -5,7 +5,7 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
-	"golang.org/x/net/proxy"
+	//"golang.org/x/net/proxy"
 	"net"
 	"net/http"
 	"net/http/cookiejar"
@@ -35,7 +35,14 @@ func NewHttpClient () HttpClient{
 	return HttpClient{
 		client:http.Client{
 			Jar:nil,
-			Transport:&http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true},},
+			Transport:&http.Transport{
+				TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+				TLSNextProto:    make(map[string]func(authority string, c *tls.Conn) http.RoundTripper),
+				MaxIdleConns:1000,
+				MaxIdleConnsPerHost:1000,
+				//MaxConnsPerHost:1000,
+				DisableKeepAlives:true,
+			},
 	},
 		header:header,
 		tempheader:make(map[string]string),
@@ -72,39 +79,64 @@ func (this *HttpClient) SetHttpProxy(proxy string) error{
 	if err != nil{
 		return err
 	}
-	this.client.Transport=&http.Transport{
-		Proxy: http.ProxyURL(proxyUrl),
-		//DisableKeepAlives: true,
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		TLSNextProto:    make(map[string]func(authority string, c *tls.Conn) http.RoundTripper),
-		DialContext: (&net.Dialer{
-			Timeout:   this.client.Timeout,
-			KeepAlive: this.client.Timeout,
-		}).DialContext,
-		TLSHandshakeTimeout: this.client.Timeout,
-		ExpectContinueTimeout:this.client.Timeout,
-		IdleConnTimeout:this.client.Timeout,
-	}
+	this.client.Transport.(*http.Transport).Proxy=http.ProxyURL(proxyUrl)
 	return err
 }
 
 func (this *HttpClient) UnsetHttpProxy(){
-	this.client.Transport = nil
+	this.client.Transport.(*http.Transport).Proxy = nil
 	return
 }
 
-func (this *HttpClient) SetSock5Proxy(prox string) error{
-	dialSocksProxy, err := proxy.SOCKS5("tcp", prox, nil, proxy.Direct)
-	//dialSocksProxy, err := proxy.SOCKS5("tcp", prox, nil, &net.Dialer { Timeout: 30 * time.Second, KeepAlive: 30 * time.Second})
+func (this *HttpClient) SetProxy(proxy string) error{
+	proxyUrl, err := url.Parse(proxy)
 	if err != nil{
 		return err
 	}
-	this.client.Transport=&http.Transport{Dial:dialSocksProxy.Dial}
+	this.client.Transport.(*http.Transport).Proxy=http.ProxyURL(proxyUrl)
 	return err
 }
 
+func (this *HttpClient) SetSock5Proxy(proxy string) error{
+	proxyUrl, err := url.Parse(proxy)
+	if err != nil{
+		return err
+	}
+	this.client.Transport.(*http.Transport).Proxy=http.ProxyURL(proxyUrl)
+	return err
+	//dialSocksProxy, err := proxy.SOCKS5("tcp", prox, nil, proxy.Direct)
+	/*dialSocksProxy, err := proxy.SOCKS5("tcp", prox, nil,
+		&net.Dialer { Timeout:   this.client.Timeout, KeepAlive: this.client.Timeout},
+	)
+	if err != nil{
+		return err
+	}
+	this.client.Transport.(*http.Transport).Dial=dialSocksProxy.Dial
+	return err*/
+}
+
 func (this *HttpClient) UnsetSocksProxy() {
-	this.client.Transport=nil
+	this.client.Transport.(*http.Transport).Dial=nil
+}
+
+func (this *HttpClient) UnsetProxy(){
+	this.client.Transport.(*http.Transport).Proxy = nil
+	this.client.Transport.(*http.Transport).Dial=nil
+}
+
+func (this *HttpClient) SetTimeOut(d time.Duration){
+	this.client.Timeout=d
+	this.client.Transport.(*http.Transport).TLSHandshakeTimeout=d
+	this.client.Transport.(*http.Transport).ExpectContinueTimeout=d
+	this.client.Transport.(*http.Transport).IdleConnTimeout=d
+	this.client.Transport.(*http.Transport).DialContext=(&net.Dialer{
+		Timeout:   d,
+		KeepAlive: d,
+	}).DialContext
+}
+
+func (this *HttpClient) CloseIdleConnections(){
+	this.client.CloseIdleConnections()
 }
 
 func (this *HttpClient) EnableCookie(){
@@ -121,27 +153,13 @@ func (this *HttpClient) ClearCookie() error{
 	if err != nil{
 		return err
 	}
-	this.client.Jar,this.cookiejar=jar,jar
+	if this.client.Jar !=nil{
+		this.client.Jar=jar
+	}
+	this.cookiejar=jar
 	return nil
 }
 
-func (this *HttpClient) SetTimeOut(d time.Duration){
-	this.client.Timeout=d
-	this.client.Transport=&http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		DialContext: (&net.Dialer{
-			Timeout:   d,
-			//KeepAlive: d,
-		}).DialContext,
-		TLSHandshakeTimeout: d,
-		ExpectContinueTimeout:d,
-		IdleConnTimeout:d,
-	}
-}
-
-func (this *HttpClient) UnSetTimeOut(){
-	this.client.Timeout=0
-}
 
 func (this *HttpClient) SetCookies(targetUrl string, cookies []*http.Cookie) error{
 	u, err := url.Parse(targetUrl)
@@ -165,7 +183,6 @@ func (this *HttpClient) Get(url string) (r Resp,err error){
 	if err != nil{
 		return
 	}
-
 	for k,v :=range this.header{
 		req.Header.Set(k,v)
 	}
@@ -181,6 +198,9 @@ func (this *HttpClient) Get(url string) (r Resp,err error){
 	this.tempheader=make(map[string]string)
 	resp,err:=this.client.Do(req)
 	if err != nil{
+		if resp != nil && resp.Body != nil {
+			resp.Body.Close()
+		}
 		return
 	}
 	r.StatusCode=resp.StatusCode

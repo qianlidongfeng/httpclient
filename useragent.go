@@ -23,5 +23,5 @@ var	UserAgents = UA{
 func (this *UA) One() string{
 	l := len(*this)
 	rand.Seed(time.Now().UnixNano())
-	return (*this)[rand.Intn(l-1)]
+	return (*this)[rand.Intn(l)]
 }

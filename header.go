@@ -19,7 +19,7 @@ var Headers = HEADERS{
 	{
 		AcceptLanguage:"zh-CN,zh;q=0.9",
 		CacheControl:"no-cache",
-		//Connection:"keep-alive",
+		Connection:"keep-alive",
 		//Connection:"close",
 		Accept:"text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3",
 		AcceptEncoding:"gzip, deflate, br",
@@ -27,7 +27,7 @@ var Headers = HEADERS{
 	{
 		AcceptLanguage:"zh-CN,zh;q=0.8,zh-TW;q=0.7,zh-HK;q=0.5,en-US;q=0.3,en;q=0.2",
 		CacheControl:"no-cache",
-		//Connection:"keep-alive",
+		Connection:"keep-alive",
 		//Connection:"close",
 		Accept:"text/html,application/xhtml+xm…plication/xml;q=0.9,*/*;q=0.8",
 		AcceptEncoding:"gzip, deflate, br",
@@ -37,7 +37,7 @@ var Headers = HEADERS{
 func (this *HEADERS) One() map[string]string{
 	l := len(*this)
 	rand.Seed(time.Now().UnixNano())
-	header:=(*this)[rand.Intn(l-1)]
+	header:=(*this)[rand.Intn(l)]
 	m:=make(map[string]string)
 	if header.AcceptLanguage!= ""{
 		m["Accept-Language"]=header.AcceptLanguage
@@ -54,5 +54,6 @@ func (this *HEADERS) One() map[string]string{
 	if header.AcceptEncoding != ""{
 		m["Accept-Encoding"]=header.AcceptEncoding
 	}
+	m["User-Agent"]=UserAgents.One()
 	return m
 }
