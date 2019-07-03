@@ -259,7 +259,7 @@ func (this *Client)writeHttpsConnectHeader(u *url.URL,conn io.Writer) error{
 	return w.Flush()
 }
 
-func (this *Client) writeHeader(u *url.URL,conn io.Writer,method string) error{
+func (this *Client) writeHeader(u *url.URL,conn io.Writer,method string,data []byte) error{
 	ruri:=u.RequestURI()
 	if this.proxy != nil{
 		if u.Scheme=="http" && this.proxy.Scheme != "socks5"{
@@ -326,6 +326,9 @@ func (this *Client) writeHeader(u *url.URL,conn io.Writer,method string) error{
 	if err != nil {
 		return err
 	}
+	if method == "POST"{
+
+	}
 	return w.Flush()
 }
 
@@ -384,7 +387,7 @@ func (this *Client)do(destUrl string,method string,data []byte) (resp Resp,err e
 			}
 		}
 	}
-	err= this.writeHeader(u,conn,method)
+	err= this.writeHeader(u,conn,method,data)
 	if err != nil{
 		return
 	}

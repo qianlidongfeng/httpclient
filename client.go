@@ -39,6 +39,9 @@ func (this *Client)Get(destUrl string) (resp Resp,err error){
 	return this.do(destUrl,"GET",nil)
 }
 
+func (this *Client)Post(destUrl string,data []byte) (resp Resp,err error){
+	return this.do(destUrl,"POST",data)
+}
 
 func (this *Client) SetProxy(proxy string) error{
 	var err error
@@ -50,6 +53,17 @@ func (this *Client) SetProxy(proxy string) error{
 		return errors.New("proxy url missing host")
 	}
 	return nil
+}
+
+func (this *Client) GetProxy() string{
+	if this.proxy!=nil{
+		path:=this.proxy.RequestURI()
+		if path=="/"{
+			path=""
+		}
+		return this.proxy.Scheme+"://"+this.proxy.Host+path
+	}
+	return ""
 }
 
 func (this *Client) UnSetProxy(){
